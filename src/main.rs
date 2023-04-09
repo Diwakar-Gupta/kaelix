@@ -1,3 +1,12 @@
+mod editor;
+mod terminal;
+mod config;
+
+use editor::Editor;
+use config::Config;
+
 fn main() {
-    println!("Hello, world!");
+    let config = Config::new();
+    let mut editor = Editor::new(config);
+    editor.run();
 }
