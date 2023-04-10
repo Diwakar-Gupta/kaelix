@@ -7,4 +7,5 @@ edition = "2021"
 panic = "abort"
 
 [dependencies]
+regex = "1.7.3"
 termion = "2.0.1"

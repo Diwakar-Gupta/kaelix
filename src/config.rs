@@ -8,14 +8,14 @@ impl General {
     pub fn new() -> Self {
         Self {
             line_number_padding_left: 2,
-            line_number_padding_right: 3,
+            line_number_padding_right: 1,
             file_tree_width: 18,
         }
     }
 }
 
 pub struct Config {
-    general: General,
+    pub general: General,
 }
 
 impl Config {
