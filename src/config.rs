@@ -4,7 +4,7 @@ pub struct General {
     pub file_tree_width: usize,
 }
 
-impl General{
+impl General {
     pub fn new() -> Self {
         Self {
             line_number_padding_left: 2,
@@ -14,12 +14,14 @@ impl General{
     }
 }
 
-pub struct Config{
+pub struct Config {
     general: General,
 }
 
-impl Config{
-    pub fn new() -> Self{
-        Config { general: General::new() }
+impl Config {
+    pub fn new() -> Self {
+        Config {
+            general: General::new(),
+        }
     }
 }
