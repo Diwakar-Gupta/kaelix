@@ -6,7 +6,7 @@ use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
 use termion::{event::Key, input::TermRead};
 
-use crate::common::{Size, Position};
+use crate::common::{Position, Size};
 use crate::doc::Doc;
 use crate::filetree::FileTree;
 use crate::status_line::{InputStatus, StatusLine};
@@ -130,26 +130,30 @@ impl Editor {
 
     fn process_command_event(&self, input: String) {}
 
-fn update_cursor_from_curr_doc(&mut self){
-    let col_offset = self.docs[self.active_doc].get_line_number_length();
-    
-    let col_offset = match self.view{
-        View::Doc => col_offset + self.config.general.line_number_padding_right,
-        View::FileTree => todo!(),
-        View::Both(FocusComponent::Doc) => self.config.general.file_tree_width + col_offset + self.config.general.line_number_padding_right,
-        View::Both(FocusComponent::FileTree) => todo!(),
-    };
+    fn update_cursor_from_curr_doc(&mut self) {
+        let col_offset = self.docs[self.active_doc].get_line_number_length();
 
-    let doc_cursor = self.docs[self.active_doc].cursor_pos;
-    let doc_offset = self.docs[self.active_doc].offset;
+        let col_offset = match self.view {
+            View::Doc => col_offset + self.config.general.line_number_padding_right,
+            View::FileTree => todo!(),
+            View::Both(FocusComponent::Doc) => {
+                self.config.general.file_tree_width
+                    + col_offset
+                    + self.config.general.line_number_padding_right
+            }
+            View::Both(FocusComponent::FileTree) => todo!(),
+        };
 
-    let row_offset: usize = 1;
+        let doc_cursor = self.docs[self.active_doc].cursor_pos;
+        let doc_offset = self.docs[self.active_doc].offset;
 
-    self.cursor_pos = Position{
-        row: row_offset + doc_cursor.row + 1 - doc_offset.row,
-        col: col_offset + doc_cursor.col + 1 - doc_offset.col,
-    };
-}
+        let row_offset: usize = 1;
+
+        self.cursor_pos = Position {
+            row: row_offset + doc_cursor.row + 1 - doc_offset.row,
+            col: col_offset + doc_cursor.col + 1 - doc_offset.col,
+        };
+    }
 
     fn update(&mut self) {
         self.terminal.sync_terminal_size();
@@ -159,7 +163,7 @@ fn update_cursor_from_curr_doc(&mut self){
         self.render();
 
         // update cursor based on view after render
-        match self.view{
+        match self.view {
             View::Doc | View::Both(FocusComponent::Doc) => self.update_cursor_from_curr_doc(),
             View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
         }

@@ -1,10 +1,10 @@
 use std::{cmp::min, fs};
 
 use regex::Regex;
-use termion::{color, event::Key, style};
 use std::cmp::max;
+use termion::{color, event::Key, style};
 
-use crate::{common::Size, config::Config, common::Position};
+use crate::{common::Position, common::Size, config::Config};
 
 pub struct StatusLine {
     pub typee: Type,
@@ -53,7 +53,7 @@ impl Doc {
 
         let rows_to_render = min(size.height, self.lines.len() - self.offset.row);
         let cols_to_render = content_width;
-        
+
         let mut frames = Vec::with_capacity(rows_to_render);
 
         self.update_offset(rows_to_render, cols_to_render);
@@ -107,7 +107,7 @@ impl Doc {
 
 impl Doc {
     pub fn process_key(&mut self, key: &Key) {
-        match key{
+        match key {
             Key::Left => {
                 self.col_left();
             }
@@ -120,15 +120,17 @@ impl Doc {
             Key::Down => {
                 self.row_down();
             }
+            Key::Char(ch) => self.write_char(ch.to_owned()),
+            Key::Backspace => self.handle_backspace(),
             _ => todo!(),
         }
     }
 
-    fn col_left(&mut self)  {
+    fn col_left(&mut self) {
         if self.cursor_pos.col > 0 {
             self.cursor_pos.col = self.cursor_pos.col.saturating_sub(1);
         } else {
-            if self.cursor_pos.row > 0{
+            if self.cursor_pos.row > 0 {
                 self.cursor_pos.row = self.cursor_pos.row.saturating_sub(1);
                 self.cursor_pos.col = max(self.lines[self.cursor_pos.row].len(), 0);
             }
@@ -136,10 +138,10 @@ impl Doc {
     }
 
     fn col_right(&mut self) {
-        if self.cursor_pos.col < self.lines[self.cursor_pos.row].len(){
-            self.cursor_pos.col=self.cursor_pos.col.saturating_add(1);
+        if self.cursor_pos.col < self.lines[self.cursor_pos.row].len() {
+            self.cursor_pos.col = self.cursor_pos.col.saturating_add(1);
         } else if self.cursor_pos.row + 1 < self.lines.len() {
-            self.cursor_pos.row=self.cursor_pos.row.saturating_add(1);
+            self.cursor_pos.row = self.cursor_pos.row.saturating_add(1);
             self.cursor_pos.col = 0;
         }
     }
@@ -147,36 +149,66 @@ impl Doc {
     fn row_up(&mut self) {
         if self.cursor_pos.row > 0 {
             self.cursor_pos.row = self.cursor_pos.row.saturating_sub(1);
-            if self.lines[self.cursor_pos.row].len() <= self.cursor_pos.col{
+            if self.lines[self.cursor_pos.row].len() <= self.cursor_pos.col {
                 self.cursor_pos.col = max(self.lines[self.cursor_pos.row].len(), 0);
             }
         }
     }
 
     fn row_down(&mut self) {
-        if self.cursor_pos.row+1 < self.lines.len() {
+        if self.cursor_pos.row + 1 < self.lines.len() {
             self.cursor_pos.row = self.cursor_pos.row.saturating_add(1);
-            if self.lines[self.cursor_pos.row].len() <= self.cursor_pos.col{
+            if self.lines[self.cursor_pos.row].len() <= self.cursor_pos.col {
                 self.cursor_pos.col = max(self.lines[self.cursor_pos.row].len(), 0);
             }
         }
     }
 
-    fn update_offset(&mut self, render_nrows: usize, render_ncols: usize){
-        let last_row = self.offset.row + render_nrows -1;
-        let last_col = self.offset.col + render_ncols -1;
+    fn update_offset(&mut self, render_nrows: usize, render_ncols: usize) {
+        let last_row = self.offset.row + render_nrows - 1;
+        let last_col = self.offset.col + render_ncols - 1;
 
-        if last_row < self.cursor_pos.row{
+        if last_row < self.cursor_pos.row {
             self.offset.row += self.cursor_pos.row - last_row;
         }
-        if last_col < self.cursor_pos.col{
+        if last_col < self.cursor_pos.col {
             self.offset.col += self.cursor_pos.col - last_col;
         }
-        if self.cursor_pos.row < self.offset.row{
+        if self.cursor_pos.row < self.offset.row {
             self.offset.row = self.cursor_pos.row;
         }
-        if self.cursor_pos.col < self.offset.col{
+        if self.cursor_pos.col < self.offset.col {
             self.offset.col = self.cursor_pos.col;
+        }
+    }
+}
+
+// doc edit operations
+impl Doc {
+    fn write_char(&mut self, ch: char) {
+        if ch == '\n' {
+            self.lines.insert(self.cursor_pos.row + 1, "".to_string());
+            self.cursor_pos.row += 1;
+            self.cursor_pos.col = 0;
+        } else {
+            self.lines[self.cursor_pos.row].insert(self.cursor_pos.col, ch);
+            self.col_right();
+        }
+    }
+    fn handle_backspace(&mut self) {
+        if self.cursor_pos.col == 0 {
+            // merge self.cursor_pos.row-1 and self.cursor_pos.row
+            if self.cursor_pos.row > 0 {
+                let new_col = self.lines[self.cursor_pos.row - 1].len();
+                let curr_line = self.lines.remove(self.cursor_pos.row);
+                self.lines[self.cursor_pos.row - 1].push_str(curr_line.as_str());
+
+                self.cursor_pos.row -= 1;
+                self.cursor_pos.col = new_col;
+            }
+        } else {
+            self.col_left();
+            self.lines[self.cursor_pos.row].remove(self.cursor_pos.col);
         }
     }
 }
