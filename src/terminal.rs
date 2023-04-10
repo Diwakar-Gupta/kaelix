@@ -1,14 +1,11 @@
-use std::{io::stdout, io::Write, fmt::Display};
+use std::{fmt::Display, io::stdout, io::Write};
 
 use termion::{
     raw::IntoRawMode,
     screen::{IntoAlternateScreen, ToAlternateScreen, ToMainScreen},
 };
 
-pub struct Size{
-    pub height: usize,
-    pub width: usize,
-}
+use crate::common::Size;
 
 pub struct Terminal {
     pub size: Size,
@@ -24,15 +21,23 @@ impl Terminal {
             .unwrap();
         let size = termion::terminal_size().unwrap();
 
-        Self { screen, size: Size { height: size.1 as usize, width: size.0 as usize } }
+        Self {
+            screen,
+            size: Size {
+                height: size.1 as usize,
+                width: size.0 as usize,
+            },
+        }
     }
-    pub fn print(&self, message: impl Display){
-        print!("{}", message);
+    pub fn print(&mut self, message: impl Display) {
+        // print!("{}", message);
+        write!(self.screen, "{}", message).unwrap();
     }
-    pub fn println(&self, message: impl Display){
-        println!("{}", message);
+    pub fn print_flush(&mut self, message: impl Display) {
+        self.print(message);
+        self.flush();
     }
-    pub fn set_cursor_pos(&self, row: usize, col: usize){
+    pub fn set_cursor_pos(&mut self, row: usize, col: usize) {
         self.print(format!("{}", termion::cursor::Goto(col as u16, row as u16)));
     }
     pub fn leave_alternate_screen(&mut self) {
@@ -41,18 +46,18 @@ impl Terminal {
     pub fn enter_alternate_screen(&mut self) {
         write!(self.screen, "{}", ToAlternateScreen).unwrap();
     }
-    pub fn clear(&mut self){
+    pub fn clear(&mut self) {
         self.print(termion::clear::All);
     }
 
-    pub fn sync_terminal_size(&mut self){
+    pub fn sync_terminal_size(&mut self) {
         let size = termion::terminal_size().unwrap();
 
         self.size.width = size.0 as usize;
         self.size.height = size.1 as usize;
     }
 
-    pub(crate) fn flush(&self) {
-        println!();
+    pub(crate) fn flush(&mut self) {
+        self.screen.flush().unwrap();
     }
 }

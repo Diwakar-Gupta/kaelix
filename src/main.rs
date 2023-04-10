@@ -1,9 +1,13 @@
-mod editor;
-mod terminal;
+mod status_line;
+mod common;
 mod config;
+mod doc;
+mod editor;
+mod filetree;
+mod terminal;
 
-use editor::Editor;
 use config::Config;
+use editor::Editor;
 
 fn main() {
     let config = Config::new();
