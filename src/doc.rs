@@ -2,7 +2,7 @@ use std::{cmp::min, fs};
 
 use regex::Regex;
 use std::cmp::max;
-use termion::{color, event::Key, style};
+use termion::{color, event::{Key, MouseEvent}, style};
 
 use crate::{common::Position, common::Size, config::Config};
 
@@ -49,7 +49,7 @@ impl Doc {
 
     pub fn render(&mut self, size: &Size, config: &Config) -> Vec<String> {
         let line_number_width = self.get_line_number_length();
-        let content_width = size.width - line_number_width;
+        let content_width = size.width - line_number_width-config.general.line_number_padding_right;
 
         let rows_to_render = min(size.height, self.lines.len() - self.offset.row);
         let cols_to_render = content_width;
@@ -65,6 +65,8 @@ impl Doc {
             .zip(line_indexs_to_render)
         {
             let index = i + 1;
+            let sub_line = Self::sub_string(line, self.offset.col, cols_to_render);
+            assert!(sub_line.len()<=cols_to_render);
             frames.push(format!(
                 "{}{}{}{}{}{}",
                 " ".repeat(line_number_width - index.to_string().len()),
@@ -72,10 +74,21 @@ impl Doc {
                 index,
                 style::Reset,
                 " ".repeat(config.general.line_number_padding_right),
-                line,
+                sub_line,
             ));
         }
         frames
+    }
+
+    fn sub_string(str: &str, start: usize, len: usize) -> String{
+        let mut result = String::with_capacity(min(len, str.len().saturating_sub(start)));
+
+        for ch in str.as_bytes().iter().skip(start).take(len){
+            let ch = char::try_from(ch.to_owned()).unwrap();
+            result.push(ch);
+        }
+
+        result
     }
 
     pub(crate) fn open(path: &str) -> Option<Self> {
@@ -187,7 +200,15 @@ impl Doc {
 impl Doc {
     fn write_char(&mut self, ch: char) {
         if ch == '\n' {
-            self.lines.insert(self.cursor_pos.row + 1, "".to_string());
+            let mut new_string = self.lines.remove(self.cursor_pos.row);
+            new_string.insert(self.cursor_pos.col, '\n');
+
+            let mut new_lines = Self::split_file(&new_string);
+            assert_eq!(2, new_lines.len(), "Doc::split_file should return 2 lines");
+
+            self.lines.insert(self.cursor_pos.row, new_lines.remove(0).to_string());            
+            self.lines.insert(self.cursor_pos.row+1, new_lines.remove(0).to_string());
+
             self.cursor_pos.row += 1;
             self.cursor_pos.col = 0;
         } else {
@@ -209,6 +230,23 @@ impl Doc {
         } else {
             self.col_left();
             self.lines[self.cursor_pos.row].remove(self.cursor_pos.col);
+        }
+    }
+}
+
+// handle mouse event
+impl Doc{
+    pub fn process_mouse_event(&mut self, mouse_event: &MouseEvent){
+        match mouse_event{
+            MouseEvent::Press(button_event, _, _) => match button_event{
+                termion::event::MouseButton::Left => {},
+                termion::event::MouseButton::Right => {},
+                termion::event::MouseButton::Middle => {},
+                termion::event::MouseButton::WheelUp => self.row_up(),
+                termion::event::MouseButton::WheelDown => self.row_down(),
+            },
+            MouseEvent::Release(_, _) => {},
+            MouseEvent::Hold(_, _) => {},
         }
     }
 }

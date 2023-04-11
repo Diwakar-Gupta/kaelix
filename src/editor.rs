@@ -110,21 +110,13 @@ impl Editor {
     }
 
     fn process_mouse_event(&mut self, mouse_event: termion::event::MouseEvent) {
-        match mouse_event {
-            termion::event::MouseEvent::Press(button, _col, _row) => match button {
-                termion::event::MouseButton::Left => {}
-                termion::event::MouseButton::Right => {}
-                termion::event::MouseButton::Middle => {}
-                termion::event::MouseButton::WheelUp => {
-                    self.row_up();
-                }
-                termion::event::MouseButton::WheelDown => {
-                    self.row_down();
-                }
-            },
-            termion::event::MouseEvent::Release(_, _) => {}
-            termion::event::MouseEvent::Hold(_, _) => {}
-        }
+        match self.view {
+            View::Doc | View::Both(FocusComponent::Doc) => {
+                self.docs[self.active_doc].process_mouse_event(&mouse_event);
+            }
+            View::FileTree => todo!(),
+            View::Both(FocusComponent::FileTree) => todo!(),
+        };
         self.update();
     }
 
@@ -162,15 +154,17 @@ impl Editor {
 
         self.render();
 
+        self.terminal
+        .set_cursor_pos(self.cursor_pos.row, self.cursor_pos.col);
+    self.terminal.flush();
+}
+
+    fn update_cursor_pos(&mut self){
         // update cursor based on view after render
         match self.view {
             View::Doc | View::Both(FocusComponent::Doc) => self.update_cursor_from_curr_doc(),
             View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
         }
-
-        self.terminal
-            .set_cursor_pos(self.cursor_pos.row, self.cursor_pos.col);
-        self.terminal.flush();
     }
 
     fn render(&mut self) {
@@ -178,24 +172,27 @@ impl Editor {
 
         frames.push("1 Welcome to Lemon".to_string());
 
-        let sub_frame = self.get_sub_frame();
-
         let mut doc_frame = self.get_sub_frame();
         frames.append(&mut doc_frame);
 
-        frames.push(format!(
-            "status line ({}/{}) ({}/{})",
-            self.cursor_pos.row,
-            self.terminal.size.height,
-            self.cursor_pos.col,
-            self.terminal.size.width
-        ));
+        frames.push(self.render_status_line());
 
         let mut command_render = self.status_line.render();
         assert_eq!(1, command_render.len());
         frames.append(&mut command_render);
 
         self.terminal.print(frames.join("\r\n"));
+    }
+
+    fn render_status_line(&mut self) -> String{
+        self.update_cursor_pos();
+        format!(
+            "status line ({}/{}) ({}/{})",
+            self.cursor_pos.row,
+            self.terminal.size.height,
+            self.cursor_pos.col,
+            self.terminal.size.width
+        )
     }
 
     fn get_sub_frame(&mut self) -> Vec<String> {
