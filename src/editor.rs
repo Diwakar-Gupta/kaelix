@@ -155,11 +155,11 @@ impl Editor {
         self.render();
 
         self.terminal
-        .set_cursor_pos(self.cursor_pos.row, self.cursor_pos.col);
-    self.terminal.flush();
-}
+            .set_cursor_pos(self.cursor_pos.row, self.cursor_pos.col);
+        self.terminal.flush();
+    }
 
-    fn update_cursor_pos(&mut self){
+    fn update_cursor_pos(&mut self) {
         // update cursor based on view after render
         match self.view {
             View::Doc | View::Both(FocusComponent::Doc) => self.update_cursor_from_curr_doc(),
@@ -175,6 +175,7 @@ impl Editor {
         let mut doc_frame = self.get_sub_frame();
         frames.append(&mut doc_frame);
 
+        // should be after sub frame rendering to get correct cursor & offset
         frames.push(self.render_status_line());
 
         let mut command_render = self.status_line.render();
@@ -184,15 +185,34 @@ impl Editor {
         self.terminal.print(frames.join("\r\n"));
     }
 
-    fn render_status_line(&mut self) -> String{
+    fn render_status_line(&mut self) -> String {
         self.update_cursor_pos();
-        format!(
-            "status line ({}/{}) ({}/{})",
-            self.cursor_pos.row,
-            self.terminal.size.height,
-            self.cursor_pos.col,
-            self.terminal.size.width
-        )
+
+        match self.view {
+            View::Doc | View::Both(FocusComponent::Doc) => {
+                let active_doc = &self.docs[self.active_doc];
+                let status = format!(
+                    "{}/{} | {}",
+                    active_doc.cursor_pos.row + 1,
+                    active_doc.lines.len(),
+                    active_doc.cursor_pos.col,
+                );
+                format!(
+                    "{}{}",
+                    " ".repeat(self.terminal.size.width.saturating_sub(status.len()) - 1),
+                    status,
+                )
+            }
+            _ => {
+                format!(
+                    "status line ({}/{}) ({}/{})",
+                    self.cursor_pos.row,
+                    self.terminal.size.height,
+                    self.cursor_pos.col,
+                    self.terminal.size.width
+                )
+            }
+        }
     }
 
     fn get_sub_frame(&mut self) -> Vec<String> {
