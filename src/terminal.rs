@@ -33,10 +33,6 @@ impl Terminal {
         // print!("{}", message);
         write!(self.screen, "{}", message).unwrap();
     }
-    pub fn print_flush(&mut self, message: impl Display) {
-        self.print(message);
-        self.flush();
-    }
     pub fn set_cursor_pos(&mut self, row: usize, col: usize) {
         self.print(format!("{}", termion::cursor::Goto(col as u16, row as u16)));
     }

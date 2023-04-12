@@ -1,4 +1,4 @@
-use std::{cmp::min, fs, io, path::Path, ffi::OsStr};
+use std::{cmp::min, ffi::OsStr, fs, io, path::Path};
 
 use regex::Regex;
 use std::cmp::max;
@@ -14,22 +14,6 @@ use crate::{
     config::Config,
 };
 
-pub struct StatusLine {
-    pub typee: Type,
-    pub text: String,
-}
-
-pub enum Type {
-    Error,
-    Warning,
-    Info,
-}
-
-struct Rectangle {
-    row: (usize, usize),
-    col: (usize, usize),
-}
-
 enum TaskPending {
     SaveFile,
     None,
@@ -39,7 +23,6 @@ enum TaskPending {
 pub struct Doc {
     pub lines: Vec<String>,
     pub cursor_pos: Position,
-    status_line: StatusLine,
     pub offset: Position,
     file_path: Option<String>,
     task_pending: TaskPending,
@@ -52,10 +35,6 @@ impl Doc {
         Self {
             lines,
             cursor_pos: Position { row: 0, col: 0 },
-            status_line: StatusLine {
-                text: "New file".to_string(),
-                typee: Type::Info,
-            },
             offset: Position { row: 0, col: 0 },
             file_path: None,
             task_pending: TaskPending::None,
@@ -122,10 +101,6 @@ impl Doc {
             Some(Self {
                 lines: file.iter().map(|row| row.to_string()).collect(),
                 cursor_pos: Position { row: 0, col: 0 },
-                status_line: StatusLine {
-                    typee: Type::Info,
-                    text: "File opened".to_string(),
-                },
                 offset: Position { row: 0, col: 0 },
                 file_path: Some(path.to_string()),
                 task_pending: TaskPending::None,
@@ -183,11 +158,9 @@ impl Doc {
     fn col_left(&mut self) {
         if self.cursor_pos.col > 0 {
             self.cursor_pos.col = self.cursor_pos.col.saturating_sub(1);
-        } else {
-            if self.cursor_pos.row > 0 {
-                self.cursor_pos.row = self.cursor_pos.row.saturating_sub(1);
-                self.cursor_pos.col = max(self.lines[self.cursor_pos.row].len(), 0);
-            }
+        } else if self.cursor_pos.row > 0 {
+            self.cursor_pos.row = self.cursor_pos.row.saturating_sub(1);
+            self.cursor_pos.col = max(self.lines[self.cursor_pos.row].len(), 0);
         }
     }
 
@@ -284,13 +257,13 @@ impl Doc {
         match self.file_path.as_ref() {
             Some(file_path) => match self.save_file(file_path) {
                 Ok(_) => {
-                    self.command_status=format!("File saved: {}", file_path);
+                    self.command_status = format!("File saved: {}", file_path);
                     Task::SetCommand(format!("File saved: {}", file_path))
-                },
+                }
                 Err(err) => {
                     self.command_status = format!("Unable to save file: {}", err);
                     Task::None
-                },
+                }
             },
             None => {
                 // ask for file path from command line
@@ -300,15 +273,13 @@ impl Doc {
         }
     }
     pub fn get_title(&self) -> String {
-        match &self.file_path{
-            Some(path) => {
-                Path::new(path)
-                    .file_name()
-                    .unwrap_or_else(|| OsStr::new(path))
-                    .to_str()
-                    .unwrap_or(&path)
-                    .to_string()
-            },
+        match &self.file_path {
+            Some(path) => Path::new(path)
+                .file_name()
+                .unwrap_or_else(|| OsStr::new(path))
+                .to_str()
+                .unwrap_or(path)
+                .to_string(),
             None => "[No name]".to_string(),
         }
     }

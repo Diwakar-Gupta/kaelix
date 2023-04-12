@@ -13,11 +13,13 @@ use crate::filetree::FileTree;
 use crate::status_line::{InputStatus, StatusLine};
 use crate::{config::Config, terminal::Terminal};
 
+#[allow(dead_code)]
 enum FocusComponent {
     Doc,
     FileTree,
 }
 
+#[allow(dead_code)]
 enum View {
     Doc,
     FileTree,
@@ -27,6 +29,7 @@ enum View {
 pub struct Editor {
     active_doc: usize,
     config: Config,
+    #[allow(dead_code)]
     file_tree: FileTree,
     cursor_pos: Position,
     docs: Vec<Doc>,
@@ -59,7 +62,7 @@ impl Editor {
             docs,
             active_doc: 0,
             terminal: Terminal::new(),
-            config: config,
+            config,
             cursor_pos: Position { row: 1, col: 1 },
             status_input_active: false,
             view: View::Doc,
@@ -88,7 +91,7 @@ impl Editor {
                 }
             };
             self.process_task(task);
-            if self.docs.is_empty(){
+            if self.docs.is_empty() {
                 break;
             }
             self.update();
@@ -213,22 +216,22 @@ impl Editor {
         self.terminal.print(frames.join("\r\n"));
     }
 
-    fn render_header(&self) -> String{
-        match self.view{
+    fn render_header(&self) -> String {
+        match self.view {
             View::Doc | View::Both(FocusComponent::Doc) => self.render_doc_tabs(),
-            View::FileTree | View::Both(FocusComponent::FileTree)  => todo!(),
+            View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
         }
     }
 
-    fn render_doc_tabs(&self) -> String{
+    fn render_doc_tabs(&self) -> String {
         let mut tabs = String::new();
 
-        for (i, doc) in self.docs.iter().enumerate(){
+        for (i, doc) in self.docs.iter().enumerate() {
             let title = doc.get_title();
 
-            if i == self.active_doc{
+            if i == self.active_doc {
                 tabs.push_str(format!(" {} |", title).as_str());
-            }else{
+            } else {
                 tabs.push_str(format!(" {}{} |{}", style::Faint, title, style::Reset).as_str());
             }
         }
@@ -306,72 +309,6 @@ impl Editor {
     }
 }
 
-// handle key events
-impl Editor {
-    fn process_key(&mut self, key: &Key) {
-        match key {
-            Key::Left => {
-                self.col_left();
-            }
-            Key::Right => {
-                self.col_right();
-            }
-            Key::Up => {
-                self.row_up();
-            }
-            Key::Down => {
-                self.row_down();
-            }
-            Key::Ctrl('n') => self.new_document(),
-            Key::Ctrl('i') => {
-                self.status_input_active = true;
-                self.cursor_pos = Position {
-                    row: self.terminal.size.height,
-                    col: 0,
-                };
-                self.status_line.take_input("Input".to_string());
-            }
-            _ => todo!("unknown key"),
-        }
-    }
-
-    fn col_left(&mut self) -> bool {
-        if self.cursor_pos.col > 1 {
-            self.cursor_pos.col = self.cursor_pos.col.saturating_sub(1);
-            true
-        } else {
-            false
-        }
-    }
-
-    fn col_right(&mut self) -> bool {
-        if self.cursor_pos.col < self.terminal.size.width {
-            self.cursor_pos.col = self.cursor_pos.col.saturating_add(1);
-            true
-        } else {
-            false
-        }
-    }
-
-    fn row_up(&mut self) -> bool {
-        if self.cursor_pos.row > 1 {
-            self.cursor_pos.row = self.cursor_pos.row.saturating_sub(1);
-            true
-        } else {
-            false
-        }
-    }
-
-    fn row_down(&mut self) -> bool {
-        if self.cursor_pos.row < self.terminal.size.height {
-            self.cursor_pos.row = self.cursor_pos.row.saturating_add(1);
-            true
-        } else {
-            false
-        }
-    }
-}
-
 // file related operations
 impl Editor {
     fn new_document(&mut self) {
@@ -417,26 +354,27 @@ impl Editor {
             Task::NewDoc => self.new_document(),
             Task::OpenDoc(path) => self.open_document(Some(path)),
             Task::NextTab => {
-                self.active_doc=self.active_doc.saturating_add(1);
-                if self.active_doc >= self.docs.len(){
-                    self.active_doc=0;
+                self.active_doc = self.active_doc.saturating_add(1);
+                if self.active_doc >= self.docs.len() {
+                    self.active_doc = 0;
                 }
-            },
+            }
             Task::PrevTab => {
-                if self.active_doc == 0{
-                    self.active_doc=self.docs.len()-1;
-                }else{
-                    self.active_doc=self.active_doc.saturating_sub(1);
-                }
-            },
-            Task::CloseCurrentTab => {
-                if self.docs[self.active_doc].can_close(){
-                    self.docs.remove(self.active_doc);
-                    self.active_doc=self.active_doc.saturating_sub(1);
+                if self.active_doc == 0 {
+                    self.active_doc = self.docs.len() - 1;
                 } else {
-                    self.status_line.set_status("Can't close this tab".to_string());
+                    self.active_doc = self.active_doc.saturating_sub(1);
                 }
-            },
+            }
+            Task::CloseCurrentTab => {
+                if self.docs[self.active_doc].can_close() {
+                    self.docs.remove(self.active_doc);
+                    self.active_doc = self.active_doc.saturating_sub(1);
+                } else {
+                    self.status_line
+                        .set_status("Can't close this tab".to_string());
+                }
+            }
         }
     }
     fn process_set_command(&mut self, text: String) {

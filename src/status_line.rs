@@ -45,20 +45,16 @@ impl StatusLine {
         }
     }
     pub fn is_taking_input(&self) -> bool {
-        match self.status {
-            Status::Input(_, _) => true,
-            _ => false,
-        }
+        matches!(self.status, Status::Input(_, _))
     }
     pub fn set_status(&mut self, text: String) {
         self.status = Status::Still(text);
     }
     pub fn render(&self) -> String {
-        let line = match &self.status {
+        match &self.status {
             Status::Input(prefix, input) => format!("{}: {}", prefix, input),
             Status::Still(mes) => mes.to_string(),
-        };
-        line
+        }
     }
     pub fn process_key(&mut self, key: &Key) -> InputStatus {
         match key {
