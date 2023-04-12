@@ -9,3 +9,11 @@ pub struct Position {
     pub row: usize,
     pub col: usize,
 }
+
+pub enum Task {
+    SetCommand(String),
+    AskInput(String),
+    NewDoc,
+    None,
+    OpenDoc(String),
+}
