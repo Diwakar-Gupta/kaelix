@@ -43,6 +43,7 @@ pub struct Doc {
     pub offset: Position,
     file_path: Option<String>,
     task_pending: TaskPending,
+    pub command_status: String,
 }
 
 impl Doc {
@@ -58,6 +59,7 @@ impl Doc {
             offset: Position { row: 0, col: 0 },
             file_path: None,
             task_pending: TaskPending::None,
+            command_status: "Untitled file".to_string(),
         }
     }
 
@@ -127,6 +129,7 @@ impl Doc {
                 offset: Position { row: 0, col: 0 },
                 file_path: Some(path.to_string()),
                 task_pending: TaskPending::None,
+                command_status: "File loaded succesfully".to_string(),
             })
         } else {
             None
@@ -229,6 +232,9 @@ impl Doc {
 
 // doc edit operations
 impl Doc {
+    pub fn set_file_path(&mut self, path: String) {
+        self.file_path = Some(path);
+    }
     fn write_char(&mut self, ch: char) -> Task {
         if ch == '\n' {
             let mut new_string = self.lines.remove(self.cursor_pos.row);
@@ -270,8 +276,14 @@ impl Doc {
     fn process_save_file(&mut self) -> Task {
         match self.file_path.as_ref() {
             Some(file_path) => match self.save_file(file_path) {
-                Ok(_) => Task::SetCommand(format!("File saved: {}", file_path)),
-                Err(err) => Task::SetCommand(format!("Unable to save file: {}", err)),
+                Ok(_) => {
+                    self.command_status=format!("File saved: {}", file_path);
+                    Task::SetCommand(format!("File saved: {}", file_path))
+                },
+                Err(err) => {
+                    self.command_status = format!("Unable to save file: {}", err);
+                    Task::None
+                },
             },
             None => {
                 // ask for file path from command line
@@ -315,6 +327,9 @@ impl Doc {
 
 // handle command input
 impl Doc {
+    pub fn set_command_status(&mut self, status: String) {
+        self.command_status = status;
+    }
     pub(crate) fn process_command_input(&mut self, input: String) -> Task {
         let task = match self.task_pending {
             TaskPending::SaveFile => {

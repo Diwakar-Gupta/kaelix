@@ -39,11 +39,21 @@ impl Editor {
     pub(crate) fn new(config: Config, file_path: Option<String>) -> Self {
         let mut docs = vec![];
 
-        if let Some(path) = file_path {
-            docs.push(Doc::open(&path).unwrap_or_else(|| panic!("Cannot open file: {}", path)));
+        let doc = if let Some(path) = file_path {
+            match Doc::open(&path) {
+                Some(doc) => doc,
+                None => {
+                    let mut doc = Doc::new();
+                    doc.set_file_path(path);
+                    doc.set_command_status("New named doc created".to_string());
+                    doc
+                }
+            }
         } else {
-            docs.push(Doc::new());
-        }
+            Doc::new()
+        };
+        docs.push(doc);
+
         Editor {
             docs,
             active_doc: 0,
@@ -193,11 +203,22 @@ impl Editor {
         // should be after sub frame rendering to get correct cursor & offset
         frames.push(self.render_status_line());
 
-        let mut command_render = self.status_line.render();
-        assert_eq!(1, command_render.len());
-        frames.append(&mut command_render);
+        let command_render = self.render_command_line();
+        frames.push(command_render);
 
         self.terminal.print(frames.join("\r\n"));
+    }
+
+    fn render_command_line(&mut self) -> String {
+        if !self.status_line.is_taking_input() {
+            match self.view {
+                View::Doc | View::Both(FocusComponent::Doc) => self
+                    .status_line
+                    .set_status(self.docs[self.active_doc].command_status.clone()),
+                View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
+            };
+        }
+        self.status_line.render()
     }
 
     fn render_status_line(&mut self) -> String {
