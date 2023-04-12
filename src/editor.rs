@@ -6,7 +6,7 @@ use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
 use termion::{event::Key, input::TermRead};
 
-use crate::common::{Position, Size};
+use crate::common::{Position, Size, Task};
 use crate::doc::Doc;
 use crate::filetree::FileTree;
 use crate::status_line::{InputStatus, StatusLine};
@@ -40,7 +40,7 @@ impl Editor {
         let mut docs = vec![];
 
         if let Some(path) = file_path {
-            docs.push(Doc::open(&path).expect(format!("Cannot open file: {}", path).as_str()));
+            docs.push(Doc::open(&path).unwrap_or_else(|| panic!("Cannot open file: {}", path)));
         } else {
             docs.push(Doc::new());
         }
@@ -65,31 +65,32 @@ impl Editor {
 
         self.update();
         for c in stdin.events() {
-            match c.unwrap() {
-                Event::Key(Key::Char('q')) => {
+            let task: Task = match c.unwrap() {
+                Event::Key(Key::Ctrl('q')) => {
                     break;
                 }
-                Event::Key(key) => {
-                    self.process_key_event(key);
+                Event::Key(key) => self.process_key_event(key),
+                Event::Mouse(mouse_event) => self.process_mouse_event(mouse_event),
+                Event::Unsupported(_) => {
+                    self.terminal.leave_alternate_screen();
+                    todo!("Unsupported event")
                 }
-                Event::Mouse(mouse_event) => {
-                    self.process_mouse_event(mouse_event);
-                }
-                Event::Unsupported(_) => {}
-            }
-            // println!("{:?}", c);
+            };
+            self.process_task(task);
+            self.update();
         }
 
         self.terminal.leave_alternate_screen();
     }
 
-    fn process_key_event(&mut self, key: Key) {
+    fn process_key_event(&mut self, key: Key) -> Task {
         if self.status_input_active {
             let command = self.status_line.process_key(&key);
             match command {
-                InputStatus::Processing => todo!(),
+                InputStatus::Processing => Task::None,
                 InputStatus::Cancelled => {
                     self.status_input_active = false;
+                    Task::SetCommand("Cancelled".to_string())
                 }
                 InputStatus::Done(input) => {
                     self.status_input_active = false;
@@ -99,17 +100,15 @@ impl Editor {
         } else {
             match self.view {
                 View::Doc | View::Both(FocusComponent::Doc) => {
-                    self.docs[self.active_doc].process_key(&key);
+                    self.docs[self.active_doc].process_key(&key)
                 }
                 View::FileTree => todo!(),
                 View::Both(_) => todo!(),
-            };
+            }
         }
-
-        self.update();
     }
 
-    fn process_mouse_event(&mut self, mouse_event: termion::event::MouseEvent) {
+    fn process_mouse_event(&mut self, mouse_event: termion::event::MouseEvent) -> Task {
         match self.view {
             View::Doc | View::Both(FocusComponent::Doc) => {
                 self.docs[self.active_doc].process_mouse_event(&mouse_event);
@@ -117,10 +116,17 @@ impl Editor {
             View::FileTree => todo!(),
             View::Both(FocusComponent::FileTree) => todo!(),
         };
-        self.update();
+        Task::None
     }
 
-    fn process_command_event(&self, input: String) {}
+    fn process_command_event(&mut self, input: String) -> Task {
+        match self.view {
+            View::Doc | View::Both(FocusComponent::Doc) => {
+                self.docs[self.active_doc].process_command_input(input)
+            }
+            View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
+        }
+    }
 
     fn update_cursor_from_curr_doc(&mut self) {
         let col_offset = self.docs[self.active_doc].get_line_number_length();
@@ -161,10 +167,19 @@ impl Editor {
 
     fn update_cursor_pos(&mut self) {
         // update cursor based on view after render
-        match self.view {
-            View::Doc | View::Both(FocusComponent::Doc) => self.update_cursor_from_curr_doc(),
-            View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
+        if self.status_input_active {
+            self.update_cursor_from_command_line();
+        } else {
+            match self.view {
+                View::Doc | View::Both(FocusComponent::Doc) => self.update_cursor_from_curr_doc(),
+                View::FileTree | View::Both(FocusComponent::FileTree) => todo!(),
+            }
         }
+    }
+
+    fn update_cursor_from_command_line(&mut self) {
+        self.cursor_pos.row = self.terminal.size.height;
+        self.cursor_pos.col = self.status_line.get_cursor_with_prefix();
     }
 
     fn render(&mut self) {
@@ -267,7 +282,7 @@ impl Editor {
                     row: self.terminal.size.height,
                     col: 0,
                 };
-                self.status_line.take_input("Input");
+                self.status_line.take_input("Input".to_string());
             }
             _ => todo!("unknown key"),
         }
@@ -342,5 +357,25 @@ impl Editor {
                 todo!()
             }
         }
+    }
+}
+
+// process task
+impl Editor {
+    fn process_task(&mut self, task: Task) {
+        match task {
+            Task::SetCommand(text) => self.process_set_command(text),
+            Task::AskInput(prefix) => self.ask_input(prefix),
+            Task::None => {}
+            Task::NewDoc => self.new_document(),
+            Task::OpenDoc(path) => self.open_document(Some(path)),
+        }
+    }
+    fn process_set_command(&mut self, text: String) {
+        self.status_line.set_status(text);
+    }
+    fn ask_input(&mut self, prefix: String) {
+        self.status_line.take_input(prefix);
+        self.status_input_active = true;
     }
 }

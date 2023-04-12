@@ -1,4 +1,4 @@
-use std::{cmp::min, fs};
+use std::{cmp::min, fs, io};
 
 use regex::Regex;
 use std::cmp::max;
@@ -8,7 +8,11 @@ use termion::{
     style,
 };
 
-use crate::{common::Position, common::Size, config::Config};
+use crate::{
+    common::Position,
+    common::{Size, Task},
+    config::Config,
+};
 
 pub struct StatusLine {
     pub typee: Type,
@@ -26,16 +30,24 @@ struct Rectangle {
     col: (usize, usize),
 }
 
+enum TaskPending {
+    SaveFile,
+    None,
+    OpenDoc,
+}
+
 pub struct Doc {
     pub lines: Vec<String>,
     pub cursor_pos: Position,
     status_line: StatusLine,
     pub offset: Position,
+    file_path: Option<String>,
+    task_pending: TaskPending,
 }
 
 impl Doc {
     pub fn new() -> Self {
-        let lines = vec!["This is starting doc".to_string()];
+        let lines = vec!["".to_string()];
         Self {
             lines,
             cursor_pos: Position { row: 0, col: 0 },
@@ -44,6 +56,8 @@ impl Doc {
                 typee: Type::Info,
             },
             offset: Position { row: 0, col: 0 },
+            file_path: None,
+            task_pending: TaskPending::None,
         }
     }
 
@@ -111,6 +125,8 @@ impl Doc {
                     text: "File opened".to_string(),
                 },
                 offset: Position { row: 0, col: 0 },
+                file_path: Some(path.to_string()),
+                task_pending: TaskPending::None,
             })
         } else {
             None
@@ -124,23 +140,33 @@ impl Doc {
 }
 
 impl Doc {
-    pub fn process_key(&mut self, key: &Key) {
+    pub fn process_key(&mut self, key: &Key) -> Task {
         match key {
             Key::Left => {
                 self.col_left();
+                Task::None
             }
             Key::Right => {
                 self.col_right();
+                Task::None
             }
             Key::Up => {
                 self.row_up();
+                Task::None
             }
             Key::Down => {
                 self.row_down();
+                Task::None
             }
             Key::Char(ch) => self.write_char(ch.to_owned()),
             Key::Backspace => self.handle_backspace(),
-            _ => todo!(),
+            Key::Ctrl('s') => self.process_save_file(),
+            Key::Ctrl('n') => Task::NewDoc,
+            Key::Ctrl('o') => {
+                self.task_pending = TaskPending::OpenDoc;
+                Task::AskInput("Doc path".to_string())
+            }
+            _ => Task::None,
         }
     }
 
@@ -203,7 +229,7 @@ impl Doc {
 
 // doc edit operations
 impl Doc {
-    fn write_char(&mut self, ch: char) {
+    fn write_char(&mut self, ch: char) -> Task {
         if ch == '\n' {
             let mut new_string = self.lines.remove(self.cursor_pos.row);
             new_string.insert(self.cursor_pos.col, '\n');
@@ -222,8 +248,9 @@ impl Doc {
             self.lines[self.cursor_pos.row].insert(self.cursor_pos.col, ch);
             self.col_right();
         }
+        Task::None
     }
-    fn handle_backspace(&mut self) {
+    fn handle_backspace(&mut self) -> Task {
         if self.cursor_pos.col == 0 {
             // merge self.cursor_pos.row-1 and self.cursor_pos.row
             if self.cursor_pos.row > 0 {
@@ -238,6 +265,34 @@ impl Doc {
             self.col_left();
             self.lines[self.cursor_pos.row].remove(self.cursor_pos.col);
         }
+        Task::None
+    }
+    fn process_save_file(&mut self) -> Task {
+        match self.file_path.as_ref() {
+            Some(file_path) => match self.save_file(file_path) {
+                Ok(_) => Task::SetCommand(format!("File saved: {}", file_path)),
+                Err(err) => Task::SetCommand(format!("Unable to save file: {}", err)),
+            },
+            None => {
+                // ask for file path from command line
+                self.task_pending = TaskPending::SaveFile;
+                Task::AskInput("File path".to_string())
+            }
+        }
+    }
+    fn get_doc_content(&self) -> String {
+        let mut content = String::new();
+
+        for line in self.lines.iter() {
+            content.push_str(line);
+            content.push('\n');
+        }
+        content
+    }
+    fn save_file(&self, path: &str) -> io::Result<()> {
+        let content = self.get_doc_content();
+
+        fs::write(path, content)
     }
 }
 
@@ -255,5 +310,22 @@ impl Doc {
             MouseEvent::Release(_, _) => {}
             MouseEvent::Hold(_, _) => {}
         }
+    }
+}
+
+// handle command input
+impl Doc {
+    pub(crate) fn process_command_input(&mut self, input: String) -> Task {
+        let task = match self.task_pending {
+            TaskPending::SaveFile => {
+                self.file_path = Some(input);
+                self.task_pending = TaskPending::None;
+                self.process_save_file()
+            }
+            TaskPending::None => unimplemented!("No task asking for input"),
+            TaskPending::OpenDoc => Task::OpenDoc(input),
+        };
+        self.task_pending = TaskPending::None;
+        task
     }
 }
