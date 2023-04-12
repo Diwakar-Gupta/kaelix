@@ -1,4 +1,4 @@
-use std::{cmp::min, fs, io};
+use std::{cmp::min, fs, io, path::Path, ffi::OsStr};
 
 use regex::Regex;
 use std::cmp::max;
@@ -140,6 +140,10 @@ impl Doc {
         let splitter = Regex::new("(?ms)(\r\n|\n)").unwrap();
         splitter.split(contents).collect()
     }
+
+    pub(crate) fn can_close(&self) -> bool {
+        true
+    }
 }
 
 impl Doc {
@@ -169,6 +173,9 @@ impl Doc {
                 self.task_pending = TaskPending::OpenDoc;
                 Task::AskInput("Doc path".to_string())
             }
+            Key::Ctrl('k') => Task::PrevTab,
+            Key::Ctrl('l') => Task::NextTab,
+            Key::Ctrl('w') => Task::CloseCurrentTab,
             _ => Task::None,
         }
     }
@@ -290,6 +297,19 @@ impl Doc {
                 self.task_pending = TaskPending::SaveFile;
                 Task::AskInput("File path".to_string())
             }
+        }
+    }
+    pub fn get_title(&self) -> String {
+        match &self.file_path{
+            Some(path) => {
+                Path::new(path)
+                    .file_name()
+                    .unwrap_or_else(|| OsStr::new(path))
+                    .to_str()
+                    .unwrap_or(&path)
+                    .to_string()
+            },
+            None => "[No name]".to_string(),
         }
     }
     fn get_doc_content(&self) -> String {

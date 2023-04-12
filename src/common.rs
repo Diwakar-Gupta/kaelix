@@ -10,10 +10,14 @@ pub struct Position {
     pub col: usize,
 }
 
+#[derive(PartialEq)]
 pub enum Task {
     SetCommand(String),
     AskInput(String),
     NewDoc,
     None,
     OpenDoc(String),
+    NextTab,
+    PrevTab,
+    CloseCurrentTab,
 }

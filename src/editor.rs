@@ -4,6 +4,7 @@ use std::io::{self, stdout};
 use termion::event::Event;
 use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
+use termion::style;
 use termion::{event::Key, input::TermRead};
 
 use crate::common::{Position, Size, Task};
@@ -87,6 +88,9 @@ impl Editor {
                 }
             };
             self.process_task(task);
+            if self.docs.is_empty(){
+                break;
+            }
             self.update();
         }
 
@@ -195,7 +199,7 @@ impl Editor {
     fn render(&mut self) {
         let mut frames: Vec<String> = Vec::with_capacity(max(3, self.terminal.size.height));
 
-        frames.push("1 Welcome to Lemon".to_string());
+        frames.push(self.render_header());
 
         let mut doc_frame = self.get_sub_frame();
         frames.append(&mut doc_frame);
@@ -207,6 +211,28 @@ impl Editor {
         frames.push(command_render);
 
         self.terminal.print(frames.join("\r\n"));
+    }
+
+    fn render_header(&self) -> String{
+        match self.view{
+            View::Doc | View::Both(FocusComponent::Doc) => self.render_doc_tabs(),
+            View::FileTree | View::Both(FocusComponent::FileTree)  => todo!(),
+        }
+    }
+
+    fn render_doc_tabs(&self) -> String{
+        let mut tabs = String::new();
+
+        for (i, doc) in self.docs.iter().enumerate(){
+            let title = doc.get_title();
+
+            if i == self.active_doc{
+                tabs.push_str(format!(" {} |", title).as_str());
+            }else{
+                tabs.push_str(format!(" {}{} |{}", style::Faint, title, style::Reset).as_str());
+            }
+        }
+        tabs
     }
 
     fn render_command_line(&mut self) -> String {
@@ -390,6 +416,27 @@ impl Editor {
             Task::None => {}
             Task::NewDoc => self.new_document(),
             Task::OpenDoc(path) => self.open_document(Some(path)),
+            Task::NextTab => {
+                self.active_doc=self.active_doc.saturating_add(1);
+                if self.active_doc >= self.docs.len(){
+                    self.active_doc=0;
+                }
+            },
+            Task::PrevTab => {
+                if self.active_doc == 0{
+                    self.active_doc=self.docs.len()-1;
+                }else{
+                    self.active_doc=self.active_doc.saturating_sub(1);
+                }
+            },
+            Task::CloseCurrentTab => {
+                if self.docs[self.active_doc].can_close(){
+                    self.docs.remove(self.active_doc);
+                    self.active_doc=self.active_doc.saturating_sub(1);
+                } else {
+                    self.status_line.set_status("Can't close this tab".to_string());
+                }
+            },
         }
     }
     fn process_set_command(&mut self, text: String) {
