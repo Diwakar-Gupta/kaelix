@@ -1,13 +1,13 @@
 [package]
-name = "lemon"
+name = "kaelix"
 version = "0.1.0"
 edition = "2021"
 authors = ["Diwakar Gupta <diwakargupta815@gmail.com>"]
 license = "MIT"
 description = "A command line text editor written in Rust"
 readme = "README.md"
-homepage = "https://github.com/diwakar-Gupta/lemon"
-repository = "https://github.com/diwakar-Gupta/lemon"
+homepage = "https://github.com/diwakar-Gupta/kaelix"
+repository = "https://github.com/diwakar-Gupta/kaelix"
 keywords = ["cli", "text-editor"]
 categories = ["command-line-utilities"]
 
