@@ -4,6 +4,24 @@
 
 Kaelix is a text editor written in Rust for use in the command line interface (CLI). It is designed to be lightweight, fast, and customizable.
 
+## Usage
+
+To open a file in Kaelix, simply run the following command:
+
+```shell
+kaelix filename.txt
+```
+
+### Controls
+
+* `Ctrl + n` - create new document
+* `Ctrl + o` - open file
+* `Ctrl + w` - close current document
+* `Ctrl + s` - save current document
+* `Ctrl + k` - move to previous document
+* `Ctrl + l` - move to next document
+* `Ctrl + q` - quit program
+
 ## Installation
 
 ### Install using cargo
@@ -19,21 +37,6 @@ To install Kaelix, clone the project and run this command from source directory
 cargo build --release
 ```
 this will generate the binary at `target/release/kaelix`
-
-## Usage
-
-To open a file in Kaelix, simply run the following command:
-
-```shell
-kaelix filename.txt
-```
-
-
-Kaelix provides a number of keyboard shortcuts for navigating and editing files. For a full list of shortcuts, run the following command:
-
-```shell
-kaelix --help
-```
 
 ## Contributing
 
