@@ -2,6 +2,14 @@
 name = "lemon"
 version = "0.1.0"
 edition = "2021"
+authors = ["Diwakar Gupta <diwakargupta815@gmail.com>"]
+license = "MIT"
+description = "A command line text editor written in Rust"
+readme = "README.md"
+homepage = "https://github.com/diwakar-Gupta/lemon"
+repository = "https://github.com/diwakar-Gupta/lemon"
+keywords = ["cli", "text-editor"]
+categories = ["command-line-utilities"]
 
 [profile.release]
 panic = "abort"
