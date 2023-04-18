@@ -2,6 +2,8 @@
 > While Kaelix is a fun project to work on, it is important to note that it is not intended to replace your current text editor.
 > This is just a POC project
 
+[crates.io](https://crates.io/crates/kaelix)
+
 Kaelix is a text editor written in Rust for use in the command line interface (CLI). It is designed to be lightweight, fast, and customizable.
 
 ## Usage
