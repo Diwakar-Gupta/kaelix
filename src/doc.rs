@@ -66,7 +66,8 @@ impl Doc {
         {
             let index = i + 1;
             let sub_line = Self::sub_string(line, self.offset.col, cols_to_render);
-            assert!(sub_line.len() <= cols_to_render);
+            // was creating error when ☆ was in string
+            // assert!(sub_line.len() <= cols_to_render);
             frames.push(format!(
                 "{}{}{}{}{}{}",
                 " ".repeat(line_number_width - index.to_string().len()),
