@@ -1,6 +1,4 @@
 # Kaelix
-> While Kaelix is a fun project to work on, it is important to note that it is not intended to replace your current text editor.
-> This is just a POC project
 
 [crates.io](https://crates.io/crates/kaelix)
 
