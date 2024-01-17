@@ -4,6 +4,12 @@
 
 Kaelix is a text editor written in Rust for use in the command line interface (CLI). It is designed to be lightweight, fast, and customizable.
 
+## Screenshots
+<div style="display: flex; justify-content: space-between;">
+  <img alt="Start page" src="https://github.com/Diwakar-Gupta/kaelix/assets/39624018/e44c6def-d0ac-4ff0-a7e9-f6da4ec4ce44" width="45%">
+  <img alt="Won" src="https://github.com/Diwakar-Gupta/kaelix/assets/39624018/7cb795df-6a8a-4d18-8a2b-a9e4d48fee61" width="45%">
+</div>
+
 ## Usage
 
 To open a file in Kaelix, simply run the following command:
